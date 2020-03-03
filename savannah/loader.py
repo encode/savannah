@@ -22,8 +22,7 @@ def build_dependants(dependencies: Dict[str, Set[str]]) -> Dict[str, Set[str]]:
 
 def order_dependencies(dependencies: Dict[str, Set[str]]) -> Tuple[List[str], List[str]]:
     """
-    Given a dependencies dictionary, and an initial node, return an ordered
-    list of nodes.
+    Given a dependencies dictionary, return an ordered list of nodes.
     """
     # The initial nodes are the only ones with no dependencies.
     initial_nodes = sorted([name for name, deps in dependencies.items() if not deps])
@@ -54,14 +53,15 @@ def order_dependencies(dependencies: Dict[str, Set[str]]) -> Tuple[List[str], Li
     return ordered, leaf_nodes
 
 
-def load_migrations(dir_name: str):
+def load_migrations(applied: Set[str], dir_name: str):
     migrations = {}
     dependencies = {}
 
     names = [name for _, name, is_pkg in pkgutil.iter_modules([dir_name])]
     for name in names:
         module = import_module(f"{dir_name}.{name}")
-        migration = getattr(module, "Migration")
+        migration_cls = getattr(module, "Migration")
+        migration = migration_cls(name=name, is_applied=name in applied)
         migrations[name] = migration
         dependencies[name] = set(migration.dependencies)
 
