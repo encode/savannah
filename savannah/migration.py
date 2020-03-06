@@ -2,7 +2,7 @@ from typing import List
 
 
 class Migration:
-    dependencies = []
+    dependencies: List[str] = []
     operations = []
 
     def __init__(self, name: str, is_applied: bool, dependants: List[str]) -> None:

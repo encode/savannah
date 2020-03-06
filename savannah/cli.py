@@ -1,12 +1,6 @@
 import asyncio
 import click
 import os
-import pkgutil
-import sqlalchemy
-from databases import Database
-from importlib import import_module
-from .loader import load_migrations
-from .tables import db_load_migrations_table
 from . import commands
 
 
@@ -52,20 +46,29 @@ def list_migrations(database):
 @click.option('--database', help='Database URL.')
 @click.option('--index', type=int, help='Index.')
 def migrate(database, index=None):
-    #loader_info = load_migrations(dir_name="migrations")
     asyncio.run(commands.migrate(database, index=index))
 
 
 @click.command()
 @click.option('--database', help='Database URL.')
 def create_database(database):
-    asyncio.run(commands.create_database(database))
+    exists = asyncio.run(commands.database_exists(database))
+    if not exists:
+        asyncio.run(commands.create_database(database))
+        print("Created database")
+    else:
+        print("Database already exists")
 
 
 @click.command()
 @click.option('--database', help='Database URL.')
 def drop_database(database):
-    asyncio.run(commands.drop_database(database))
+    exists = asyncio.run(commands.database_exists(database))
+    if exists:
+        asyncio.run(commands.drop_database(database))
+        print("Dropped database")
+    else:
+        print("Database does not exist")
 
 
 cli.add_command(init)

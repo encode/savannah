@@ -3,12 +3,7 @@ import pkgutil
 import typing
 from importlib import import_module
 from databases import Database
-
-
-class LoaderInfo:
-    def __init__(self, migrations, leaf_nodes):
-        self.migrations = migrations
-        self.leaf_nodes = leaf_nodes
+from .migration import Migration
 
 
 def build_dependants(dependencies: Dict[str, Set[str]]) -> Dict[str, Set[str]]:
@@ -46,7 +41,7 @@ def order_dependencies(dependencies: Dict[str, Set[str]], dependants: Dict[str, 
     return ordered
 
 
-def load_migrations(applied: Set[str], dir_name: str):
+def load_migrations(applied: Set[str], dir_name: str) -> List[Migration]:
     migration_classes = {}
     dependencies = {}
 
