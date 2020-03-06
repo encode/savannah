@@ -35,38 +35,49 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 """
 from databases import Database, DatabaseURL
 import os
+from .migration import migrations_table
+from .loader import load_migrations
+from .utils import database_exists, has_table, get_dialect
+import sqlalchemy
 
 
-async def database_exists(url):
-    url = DatabaseURL(url)
-    database_name = url.database
-
-    if url.dialect in ('postgres', 'postgresql'):
-        url = url.replace(database='postgres')
-    elif url.dialect == 'mysql':
-        url = url.replace(database='')
-
-    if url.dialect in ('postgres', 'postgresql'):
-        statement = "SELECT 1 FROM pg_database WHERE datname='%s'" % database_name
-
-    elif url.dialect == 'mysql':
-        statement = ("SELECT SCHEMA_NAME FROM INFORMATION_SCHEMA.SCHEMATA "
-                     "WHERE SCHEMA_NAME = '%s'" % database_name)
-
-    elif url.dialect == 'sqlite':
-        if database_name == ':memory:' or not database_name:
-            return True
-
-        if not os.path.isfile(database_name) or os.path.getsize(database_name) < 100:
-            return False
-
-        with open(database_name, 'rb') as file:
-            header = file.read(100)
-
-        return header[:16] == b'SQLite format 3\x00'
+async def migrate(url: str, index=None):
+    dialect = get_dialect(url)
 
     async with Database(url) as database:
-        return bool(await database.fetch_val(statement))
+        has_migrations_table = await has_table(database, "migrations")
+        if not has_migrations_table:
+            # Create the migrations table if it doesn't yet exist.
+            ddl = sqlalchemy.schema.CreateTable(migrations_table)
+            statement = ddl.compile(dialect=dialect).string
+            await database.execute(statement)
+
+        # Determine the set of migrations that have been applied.
+        query = sqlalchemy.sql.select([migrations_table.c.name])
+        records = await database.fetch_all(query)
+        applied_migrations = set([record['name'] for record in records])
+
+        # Load the migrations from disk.
+        loader_info = load_migrations(applied_migrations, dir_name="migrations")
+        migrations = list(loader_info.migrations.values())
+        if index is None:
+            index = len(migrations) + 1
+
+        # Apply the migrations.
+        async with database.transaction():
+            for migration in reversed(migrations[index:]):
+                if not(migration.is_applied):
+                    continue
+                await migration.downgrade()
+                query = migrations_table.delete().where(migrations_table.c.name==migration.name)
+                await database.execute(query)
+
+            for migration in migrations[:index]:
+                if migration.is_applied:
+                    continue
+                await migration.upgrade()
+                query = migrations_table.insert()
+                await database.execute(query, values={'name': migration.name})
 
 
 async def create_database(url, encoding='utf8', template=None):
@@ -126,32 +137,3 @@ async def drop_database(url):
 
     async with Database(url) as database:
         await database.execute(statement)
-
-
-async def has_table(database, table_name):
-    if database.url.dialect in ('postgres', 'postgresql'):
-        statement = f"SELECT EXISTS (SELECT FROM pg_tables WHERE tablename = '{table_name}');"
-        result = await database.fetch_one(statement)
-        return result['exists']
-    elif database.url.dialect == 'mysql':
-        statement = f"SHOW TABLES LIKE '{table_name}';"
-        result = await database.fetch_all(statement)
-        return bool(result)
-    else:
-        statement = f"SELECT name FROM sqlite_master WHERE type='table' AND name='{table_name}';"
-        result = await database.fetch_all(statement)
-        return bool(result)
-
-
-def get_dialect(url):
-    url = DatabaseURL(url)
-
-    if url.dialect in ('postgres', 'postgresql'):
-        from sqlalchemy.dialects.postgresql import pypostgresql
-        return pypostgresql.dialect(paramstyle="pyformat")
-    elif url.dialect == 'mysql':
-        from sqlalchemy.dialects.mysql import pymysql
-        return pymysql.dialect(paramstyle="pyformat")
-    elif url.dialect == 'mysql':
-        from sqlalchemy.dialects.sqlite import pysqlite
-        pysqlite.dialect(paramstyle="qmark")
