@@ -33,15 +33,27 @@ async def list_migrations(url: str):
     return load_migrations(applied, dir_name="migrations")
 
 
-async def migrate(url: str, index=None):
+async def migrate(url: str, target: str=None):
     async with Database(url) as database:
         await db_create_migrations_table_if_not_exists(database)
         applied_migrations = await db_load_migrations_table(database)
 
         # Load the migrations from disk.
         migrations = load_migrations(applied_migrations, dir_name="migrations")
-        if index is None:
+
+        if target is None:
             index = len(migrations) + 1
+        elif target.lower() == 'zero':
+            index = 0
+        else:
+            candidates = [
+                (index, migration) for index, migration in enumerate(migrations, 1) if migration.name.startswith(target)
+            ]
+            if len(candidates) > 1:
+                raise Exception(f"Target {target!r} matched more than one migration name.")
+            elif len(candidates) == 0:
+                raise Exception(f"Target {target!r} does not match any migrations.")
+            index, migration = candidates[0]
 
         async with database.transaction():
             # Unapply migrations.

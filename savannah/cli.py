@@ -1,6 +1,7 @@
 import asyncio
 import click
 import os
+from dotenv import load_dotenv
 from . import commands
 
 
@@ -24,15 +25,26 @@ class Migration(savannah.Migration):
 """)
 
 
+def load_database_url():
+    load_dotenv()
+    if 'DATABASE_URL' not in os.environ:
+        raise Exception('DATABASE_URL not in environment. You must specify --database.')
+    return os.environ['DATABASE_URL']
+
+
 @click.command()
 @click.option('--database', help='Database URL.')
 def make_migration(database):
+    if database is None:
+        database = load_database_url()
     asyncio.run(commands.make_migration(database))
 
 
 @click.command()
 @click.option('--database', help='Database URL.')
 def list_migrations(database):
+    if database is None:
+        database = load_database_url()
     migrations = asyncio.run(commands.list_migrations(database))
     for migration in migrations:
         if migration.is_applied:
@@ -44,14 +56,18 @@ def list_migrations(database):
 
 @click.command()
 @click.option('--database', help='Database URL.')
-@click.option('--index', type=int, help='Index.')
-def migrate(database, index=None):
-    asyncio.run(commands.migrate(database, index=index))
+@click.option('--target', type=str, help='Target.')
+def migrate(database, target=None):
+    if database is None:
+        database = load_database_url()
+    asyncio.run(commands.migrate(database, target=target))
 
 
 @click.command()
 @click.option('--database', help='Database URL.')
 def create_database(database):
+    if database is None:
+        database = load_database_url()
     exists = asyncio.run(commands.database_exists(database))
     if not exists:
         asyncio.run(commands.create_database(database))
@@ -63,6 +79,8 @@ def create_database(database):
 @click.command()
 @click.option('--database', help='Database URL.')
 def drop_database(database):
+    if database is None:
+        database = load_database_url()
     exists = asyncio.run(commands.database_exists(database))
     if exists:
         asyncio.run(commands.drop_database(database))
