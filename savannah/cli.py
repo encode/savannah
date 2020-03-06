@@ -6,7 +6,7 @@ import sqlalchemy
 from databases import Database
 from importlib import import_module
 from .loader import load_migrations
-from .migration import load_migration_table
+from .tables import db_load_migrations_table
 from . import commands
 
 
@@ -33,28 +33,13 @@ class Migration(savannah.Migration):
 @click.command()
 @click.option('--database', help='Database URL.')
 def make_migration(database):
-    applied = asyncio.run(load_migration_table(database))
-    loader_info = load_migrations(applied, dir_name="migrations")
-    final_name = loader_info.leaf_nodes[-1]
-    index = int(final_name.split("_")[0])
-    index += 1
-    with open(f"migrations/{index:04}_auto.py", "w") as fout:
-        fout.write(f"""\
-import savannah
-
-
-class Migration(savannah.Migration):
-    dependencies = {loader_info.leaf_nodes!r}
-    operations = []
-""")
-    print(f"Created migration '{index:04}_auto'")
+    asyncio.run(commands.make_migration(database))
 
 
 @click.command()
 @click.option('--database', help='Database URL.')
 def list_migrations(database):
-    applied = asyncio.run(load_migration_table(database))
-    loader_info = load_migrations(applied, dir_name="migrations")
+    loader_info = asyncio.run(commands.list_migrations(database))
     for name, migration in loader_info.migrations.items():
         if migration.is_applied:
             checkmark = '+'
