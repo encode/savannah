@@ -10,8 +10,9 @@ async def make_migration(url: str):
     async with Database(url) as database:
         applied = await db_load_migrations_table(database)
 
-    loader_info = load_migrations(applied, dir_name="migrations")
-    final_name = loader_info.leaf_nodes[-1]
+    migrations = load_migrations(applied, dir_name="migrations")
+    leaf_node_names = [migration.name for migration in migrations if migration.is_leaf]
+    final_name = leaf_nodes[-1]
     index = int(final_name.split("_")[0])
     index += 1
     with open(f"migrations/{index:04}_auto.py", "w") as fout:
@@ -20,7 +21,7 @@ import savannah
 
 
 class Migration(savannah.Migration):
-    dependencies = {loader_info.leaf_nodes!r}
+    dependencies = {leaf_node_names!r}
     operations = []
 """)
     print(f"Created migration '{index:04}_auto'")
@@ -30,8 +31,7 @@ async def list_migrations(url: str):
     async with Database(url) as database:
         applied = await db_load_migrations_table(database)
 
-    loader_info = load_migrations(applied, dir_name="migrations")
-    return loader_info
+    return load_migrations(applied, dir_name="migrations")
 
 
 async def migrate(url: str, index=None):
@@ -40,8 +40,7 @@ async def migrate(url: str, index=None):
         applied_migrations = await db_load_migrations_table(database)
 
         # Load the migrations from disk.
-        loader_info = load_migrations(applied_migrations, dir_name="migrations")
-        migrations = list(loader_info.migrations.values())
+        migrations = load_migrations(applied_migrations, dir_name="migrations")
         if index is None:
             index = len(migrations) + 1
 

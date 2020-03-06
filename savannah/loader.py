@@ -22,23 +22,14 @@ def build_dependants(dependencies: Dict[str, Set[str]]) -> Dict[str, Set[str]]:
     return dependants
 
 
-def order_dependencies(dependencies: Dict[str, Set[str]]) -> Tuple[List[str], List[str]]:
-    """
-    Given a dependencies dictionary, return an ordered list of nodes.
-    """
-    # The initial nodes are the only ones with no dependencies.
-    initial_nodes = sorted([name for name, deps in dependencies.items() if not deps])
+def order_dependencies(dependencies: Dict[str, Set[str]], dependants: Dict[str, Set[str]]) -> List[str]:
+    # The root nodes are the only ones with no dependencies.
+    root_nodes = sorted([name for name, deps in dependencies.items() if not deps])
 
-    # Build our reversed 'dependants' dictionary.
-    dependants = build_dependants(dependencies)
-
-    # The leaf nodes is the only ones with no dependants.
-    leaf_nodes = sorted([name for name, deps in dependants.items() if not deps])
-
-    ordered = list(initial_nodes)
-    seen = set(initial_nodes)
+    ordered = list(root_nodes)
+    seen = set(root_nodes)
     children = set()
-    for node in initial_nodes:
+    for node in root_nodes:
         children |= dependants[node]
 
     while children:
@@ -52,23 +43,28 @@ def order_dependencies(dependencies: Dict[str, Set[str]]) -> Tuple[List[str], Li
         else:
             raise Exception()
 
-    return ordered, leaf_nodes
+    return ordered
 
 
 def load_migrations(applied: Set[str], dir_name: str):
-    migrations = {}
+    migration_classes = {}
     dependencies = {}
 
     names = [name for _, name, is_pkg in pkgutil.iter_modules([dir_name])]
     for name in names:
         module = import_module(f"{dir_name}.{name}")
         migration_cls = getattr(module, "Migration")
-        migration = migration_cls(name=name, is_applied=name in applied)
-        migrations[name] = migration
-        dependencies[name] = set(migration.dependencies)
+        migration_classes[name] = migration_cls
+        dependencies[name] = set(migration_cls.dependencies)
 
-    names, leaf_nodes = order_dependencies(dependencies)
-    return LoaderInfo(
-        migrations={name: migrations[name] for name in names},
-        leaf_nodes=leaf_nodes
-    )
+    dependants = build_dependants(dependencies)
+    names = order_dependencies(dependencies, dependants)
+
+    migrations = []
+    for name in names:
+        migration_cls = migration_classes[name]
+        is_applied = name in applied
+        dependant_list = sorted(dependants[name])
+        migration = migration_cls(name=name, is_applied=is_applied, dependants=dependant_list)
+        migrations.append(migration)
+    return migrations

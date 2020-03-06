@@ -39,13 +39,13 @@ def make_migration(database):
 @click.command()
 @click.option('--database', help='Database URL.')
 def list_migrations(database):
-    loader_info = asyncio.run(commands.list_migrations(database))
-    for name, migration in loader_info.migrations.items():
+    migrations = asyncio.run(commands.list_migrations(database))
+    for migration in migrations:
         if migration.is_applied:
             checkmark = '+'
         else:
             checkmark = ' '
-        print(f'[{checkmark}] {name}')
+        print(f'[{checkmark}] {migration.name}')
 
 
 @click.command()
