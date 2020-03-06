@@ -41,6 +41,7 @@ async def migrate(url: str, target: str=None):
         # Load the migrations from disk.
         migrations = load_migrations(applied_migrations, dir_name="migrations")
 
+        # Determine which migration we are targeting.
         if target is None:
             index = len(migrations) + 1
         elif target.lower() == 'zero':
@@ -55,6 +56,7 @@ async def migrate(url: str, target: str=None):
                 raise Exception(f"Target {target!r} does not match any migrations.")
             index, migration = candidates[0]
 
+        # Apply or unapply migrations.
         async with database.transaction():
             # Unapply migrations.
             for migration in reversed(migrations[index:]):
@@ -71,7 +73,7 @@ async def migrate(url: str, target: str=None):
                 await db_apply_migration(database, migration.name)
 
 
-async def create_database(url, encoding='utf8'):
+async def create_database(url: str, encoding: str='utf8') -> None:
     url = DatabaseURL(url)
     database_name = url.database
 
@@ -108,7 +110,7 @@ async def create_database(url, encoding='utf8'):
             await database.execute(statement)
 
 
-async def drop_database(url):
+async def drop_database(url: str) -> None:
     url = DatabaseURL(url)
     database_name = url.database
 
@@ -129,7 +131,7 @@ async def drop_database(url):
         await database.execute(statement)
 
 
-async def database_exists(url):
+async def database_exists(url: str) -> bool:
     url = DatabaseURL(url)
     database_name = url.database
 

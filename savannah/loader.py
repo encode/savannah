@@ -8,7 +8,7 @@ from .migration import Migration
 
 def build_dependants(dependencies: Dict[str, Set[str]]) -> Dict[str, Set[str]]:
     """
-    Given a dependencies dictionary, return the reversed dependants dictionary.
+    Given a dependencies mapping, return the reversed dependants dictionary.
     """
     dependants = {name: set() for name in dependencies.keys()}
     for child, parents in dependencies.items():
@@ -18,6 +18,10 @@ def build_dependants(dependencies: Dict[str, Set[str]]) -> Dict[str, Set[str]]:
 
 
 def order_dependencies(dependencies: Dict[str, Set[str]], dependants: Dict[str, Set[str]]) -> List[str]:
+    """
+    Given the dependencies and dependants mappings, return an ordered list
+    of the dependencies.
+    """
     # The root nodes are the only ones with no dependencies.
     root_nodes = sorted([name for name, deps in dependencies.items() if not deps])
 
