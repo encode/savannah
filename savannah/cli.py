@@ -5,6 +5,12 @@ from dotenv import load_dotenv
 from . import commands
 
 
+def load_database_url():
+    load_dotenv()
+    if 'DATABASE_URL' not in os.environ:
+        raise Exception('DATABASE_URL not in environment. You must specify --database.')
+    return os.environ['DATABASE_URL']
+
 
 @click.group()
 def cli():
@@ -14,6 +20,13 @@ def cli():
 @click.command()
 def init():
     os.mkdir("migrations")
+    with open("migrations/__init__.py", "w") as fout:
+        fout.write(f"""\
+import savannah
+
+
+config = savannah.Config(metadata="example:metadata")
+""")
     with open("migrations/0001_initial.py", "w") as fout:
         fout.write("""\
 import savannah
@@ -23,13 +36,6 @@ class Migration(savannah.Migration):
     dependencies = []
     operations = []
 """)
-
-
-def load_database_url():
-    load_dotenv()
-    if 'DATABASE_URL' not in os.environ:
-        raise Exception('DATABASE_URL not in environment. You must specify --database.')
-    return os.environ['DATABASE_URL']
 
 
 @click.command()

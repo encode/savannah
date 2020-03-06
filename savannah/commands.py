@@ -1,5 +1,6 @@
 from databases import Database, DatabaseURL
 import os
+from .config import load_config
 from .tables import db_create_migrations_table_if_not_exists, db_load_migrations_table, db_apply_migration, db_unapply_migration
 from .loader import load_migrations
 import sqlalchemy
@@ -11,7 +12,7 @@ async def make_migration(url: str):
 
     migrations = load_migrations(applied, dir_name="migrations")
     leaf_node_names = [migration.name for migration in migrations if migration.is_leaf]
-    final_name = leaf_nodes[-1]
+    final_name = leaf_node_names[-1]
     index = int(final_name.split("_")[0])
     index += 1
     with open(f"migrations/{index:04}_auto.py", "w") as fout:
