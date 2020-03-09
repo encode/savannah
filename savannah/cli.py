@@ -19,23 +19,7 @@ def cli():
 
 @click.command()
 def init():
-    os.mkdir("migrations")
-    with open("migrations/__init__.py", "w") as fout:
-        fout.write(f"""\
-import savannah
-
-
-config = savannah.Config(metadata="example:metadata")
-""")
-    with open("migrations/0001_initial.py", "w") as fout:
-        fout.write("""\
-import savannah
-
-
-class Migration(savannah.Migration):
-    dependencies = []
-    operations = []
-""")
+    asyncio.run(commands.init(dir="migrations"))
 
 
 @click.command()

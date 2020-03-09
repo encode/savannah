@@ -6,6 +6,26 @@ from .loader import load_migrations
 import sqlalchemy
 
 
+async def init(dir="migrations"):
+    os.mkdir(dir)
+    with open(os.path.join(dir, "__init__.py"), "w") as fout:
+        fout.write(f"""\
+import savannah
+
+
+config = savannah.Config(metadata="example:metadata")
+""")
+    with open(os.path.join(dir, "0001_initial.py"), "w") as fout:
+        fout.write("""\
+import savannah
+
+
+class Migration(savannah.Migration):
+    dependencies = []
+    operations = []
+""")
+
+
 async def make_migration(url: str):
     async with Database(url) as database:
         applied = await db_load_migrations_table(database)
@@ -57,21 +77,29 @@ async def migrate(url: str, target: str=None):
                 raise Exception(f"Target {target!r} does not match any migrations.")
             index, migration = candidates[0]
 
+        has_downgrades = any(migration.is_applied for migration in migrations[index:])
+        has_upgrades = any(not migration.is_applied for migration in migrations[:index])
+        if not has_downgrades and not has_upgrades:
+            print("No migrations required.")
+            return
+
         # Apply or unapply migrations.
         async with database.transaction():
             # Unapply migrations.
-            for migration in reversed(migrations[index:]):
-                if not(migration.is_applied):
-                    continue
-                await migration.downgrade()
-                await db_unapply_migration(database, migration.name)
+            if has_downgrades:
+                for migration in reversed(migrations[index:]):
+                    if not(migration.is_applied):
+                        continue
+                    await migration.downgrade()
+                    await db_unapply_migration(database, migration.name)
 
             # Apply migrations.
-            for migration in migrations[:index]:
-                if migration.is_applied:
-                    continue
-                await migration.upgrade()
-                await db_apply_migration(database, migration.name)
+            if has_upgrades:
+                for migration in migrations[:index]:
+                    if migration.is_applied:
+                        continue
+                    await migration.upgrade()
+                    await db_apply_migration(database, migration.name)
 
 
 async def create_database(url: str, encoding: str='utf8') -> None:
