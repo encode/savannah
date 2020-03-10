@@ -17,7 +17,9 @@ def build_dependants(dependencies: Dict[str, Set[str]]) -> Dict[str, Set[str]]:
     return dependants
 
 
-def order_dependencies(dependencies: Dict[str, Set[str]], dependants: Dict[str, Set[str]]) -> List[str]:
+def order_dependencies(
+    dependencies: Dict[str, Set[str]], dependants: Dict[str, Set[str]]
+) -> List[str]:
     """
     Given the dependencies and dependants mappings, return an ordered list
     of the dependencies.
@@ -64,6 +66,8 @@ def load_migrations(applied: Set[str], dir_name: str) -> List[Migration]:
         migration_cls = migration_classes[name]
         is_applied = name in applied
         dependant_list = sorted(dependants[name])
-        migration = migration_cls(name=name, is_applied=is_applied, dependants=dependant_list)
+        migration = migration_cls(
+            name=name, is_applied=is_applied, dependants=dependant_list
+        )
         migrations.append(migration)
     return migrations

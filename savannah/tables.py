@@ -28,7 +28,7 @@ async def db_load_migrations_table(database: Database) -> Set[str]:
 
     query = sqlalchemy.sql.select([migrations.c.name])
     records = await database.fetch_all(query)
-    return set([record['name'] for record in records])
+    return set([record["name"] for record in records])
 
 
 async def db_create_migrations_table_if_not_exists(database: Database) -> None:
@@ -50,23 +50,25 @@ async def db_apply_migration(database: Database, name: str) -> None:
     Persist a migration record to the database.
     """
     query = migrations.insert()
-    await database.execute(query, values={'name': name})
+    await database.execute(query, values={"name": name})
 
 
 async def db_unapply_migration(database: Database, name: str) -> None:
     """
     Remove a migration record from the database.
     """
-    query = migrations.delete().where(migrations.c.name==name)
+    query = migrations.delete().where(migrations.c.name == name)
     await database.execute(query)
 
 
 async def _has_table(database, table_name):
-    if database.url.dialect in ('postgres', 'postgresql'):
-        statement = f"SELECT EXISTS (SELECT FROM pg_tables WHERE tablename = '{table_name}');"
+    if database.url.dialect in ("postgres", "postgresql"):
+        statement = (
+            f"SELECT EXISTS (SELECT FROM pg_tables WHERE tablename = '{table_name}');"
+        )
         result = await database.fetch_one(statement)
-        return result['exists']
-    elif database.url.dialect == 'mysql':
+        return result["exists"]
+    elif database.url.dialect == "mysql":
         statement = f"SHOW TABLES LIKE '{table_name}';"
         result = await database.fetch_all(statement)
         return bool(result)
@@ -79,12 +81,15 @@ async def _has_table(database, table_name):
 def _get_dialect(url):
     url = DatabaseURL(url)
 
-    if url.dialect in ('postgres', 'postgresql'):
+    if url.dialect in ("postgres", "postgresql"):
         from sqlalchemy.dialects.postgresql import pypostgresql
+
         return pypostgresql.dialect(paramstyle="pyformat")
-    elif url.dialect == 'mysql':
+    elif url.dialect == "mysql":
         from sqlalchemy.dialects.mysql import pymysql
+
         return pymysql.dialect(paramstyle="pyformat")
-    elif url.dialect == 'mysql':
+    elif url.dialect == "mysql":
         from sqlalchemy.dialects.sqlite import pysqlite
+
         pysqlite.dialect(paramstyle="qmark")

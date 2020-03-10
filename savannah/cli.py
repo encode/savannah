@@ -7,9 +7,9 @@ from . import commands
 
 def load_database_url():
     load_dotenv()
-    if 'DATABASE_URL' not in os.environ:
-        raise Exception('DATABASE_URL not in environment. You must specify --database.')
-    return os.environ['DATABASE_URL']
+    if "DATABASE_URL" not in os.environ:
+        raise Exception("DATABASE_URL not in environment. You must specify --database.")
+    return os.environ["DATABASE_URL"]
 
 
 @click.group()
@@ -23,7 +23,7 @@ def init():
 
 
 @click.command()
-@click.option('--database', help='Database URL.')
+@click.option("--database", help="Database URL.")
 def make_migration(database):
     if database is None:
         database = load_database_url()
@@ -31,22 +31,22 @@ def make_migration(database):
 
 
 @click.command()
-@click.option('--database', help='Database URL.')
+@click.option("--database", help="Database URL.")
 def list_migrations(database):
     if database is None:
         database = load_database_url()
     migrations = asyncio.run(commands.list_migrations(database))
     for migration in migrations:
         if migration.is_applied:
-            checkmark = '+'
+            checkmark = "+"
         else:
-            checkmark = ' '
-        print(f'[{checkmark}] {migration.name}')
+            checkmark = " "
+        print(f"[{checkmark}] {migration.name}")
 
 
 @click.command()
-@click.option('--database', help='Database URL.')
-@click.option('--target', type=str, help='Target.')
+@click.option("--database", help="Database URL.")
+@click.option("--target", type=str, help="Target.")
 def migrate(database, target=None):
     if database is None:
         database = load_database_url()
@@ -54,7 +54,7 @@ def migrate(database, target=None):
 
 
 @click.command()
-@click.option('--database', help='Database URL.')
+@click.option("--database", help="Database URL.")
 def create_database(database):
     if database is None:
         database = load_database_url()
@@ -67,7 +67,7 @@ def create_database(database):
 
 
 @click.command()
-@click.option('--database', help='Database URL.')
+@click.option("--database", help="Database URL.")
 def drop_database(database):
     if database is None:
         database = load_database_url()
@@ -87,5 +87,5 @@ cli.add_command(create_database)
 cli.add_command(drop_database)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     cli()

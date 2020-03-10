@@ -7,18 +7,16 @@ class Config:
         self.metadata = metadata
 
     def get_initial_state(self):
-        return {
-            'metadata': sqlalchemy.MetaData()
-        }
+        return {"metadata": sqlalchemy.MetaData()}
 
     def get_current_state(self):
-        module_str, _, attr_str = self.metadata.partition(':')
+        module_str, _, attr_str = self.metadata.partition(":")
         module = import_module(module_str)
         metadata = getattr(module, attr_str)
-        return {'metadata': metadata}
+        return {"metadata": metadata}
 
 
-def load_config(dir: str="migrations") -> Config:
+def load_config(dir: str = "migrations") -> Config:
     module = import_module(dir)
     config = getattr(module, "config")
     assert isinstance(config, Config)

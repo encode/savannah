@@ -19,7 +19,7 @@ class Migration:
         return not self.dependants
 
     async def upgrade(self):
-        print(f'Applying {self.name}')
+        print(f"Applying {self.name}")
 
     async def downgrade(self):
-        print(f'Unapplying {self.name}')
+        print(f"Unapplying {self.name}")
