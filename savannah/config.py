@@ -15,6 +15,17 @@ class Config:
         metadata = getattr(module, attr_str)
         return {"metadata": metadata}
 
+    def write_config_to_disk(self, path):
+        with open(path, "w") as fout:
+            fout.write(
+                f"""\
+import savannah
+
+
+config = savannah.Config(metadata={self.metadata!r})
+"""
+            )
+
 
 def load_config(dir: str = "migrations") -> Config:
     module = import_module(dir)

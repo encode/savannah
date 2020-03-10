@@ -1,6 +1,8 @@
 from databases import Database, DatabaseURL
 import os
-from .config import load_config
+from .config import load_config, Config
+from .generators.empty import EmptyGenerator
+from .generators.initial import InitialGenerator
 from .tables import (
     db_create_migrations_table_if_not_exists,
     db_load_migrations_table,
@@ -12,49 +14,39 @@ import sqlalchemy
 
 
 async def init(dir="migrations"):
+    migration_init_path = os.path.join(dir, "__init__.py")
+    migration_0001_path = os.path.join(dir, "0001_initial.py")
+
+    config = Config(metadata="example:metadata")
+    from_state = config.get_initial_state()
+    to_state = config.get_current_state()
+    generator = InitialGenerator(from_state=from_state, to_state=to_state)
+
     os.mkdir(dir)
-    with open(os.path.join(dir, "__init__.py"), "w") as fout:
-        fout.write(
-            f"""\
-import savannah
+    config.write_config_to_disk(path=migration_init_path)
+    print(f"Created config in {migration_init_path!r}")
+    generator.write_migration_to_disk(path=migration_0001_path)
+    print(f"Created migration '0001_initial'")
 
 
-config = savannah.Config(metadata="example:metadata")
-"""
-        )
-    with open(os.path.join(dir, "0001_initial.py"), "w") as fout:
-        fout.write(
-            """\
-import savannah
-
-
-class Migration(savannah.Migration):
-    dependencies = []
-    operations = []
-"""
-        )
-
-
-async def make_migration(url: str):
+async def make_migration(url: str, dir: str = "migrations"):
     async with Database(url) as database:
         applied = await db_load_migrations_table(database)
 
+    import os
+
+    print("list dir", os.listdir(dir))
     migrations = load_migrations(applied, dir_name="migrations")
-    leaf_node_names = [migration.name for migration in migrations if migration.is_leaf]
-    final_name = leaf_node_names[-1]
-    index = int(final_name.split("_")[0])
-    index += 1
-    with open(f"migrations/{index:04}_auto.py", "w") as fout:
-        fout.write(
-            f"""\
-import savannah
+    dependencies = [migration.name for migration in migrations if migration.is_leaf]
+    final_name = dependencies[-1]
+    index = int(final_name.split("_")[0]) + 1
 
+    migration_000x_path = os.path.join(dir, f"{index:04}_auto.py")
+    generator = EmptyGenerator()
 
-class Migration(savannah.Migration):
-    dependencies = {leaf_node_names!r}
-    operations = []
-"""
-        )
+    generator.write_migration_to_disk(
+        path=migration_000x_path, dependencies=dependencies
+    )
     print(f"Created migration '{index:04}_auto'")
 
 

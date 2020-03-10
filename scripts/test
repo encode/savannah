@@ -16,6 +16,7 @@ fi
 set -x
 
 PYTHONPATH=. ${PREFIX}pytest --ignore venv -W ignore::DeprecationWarning --cov=savannah --cov=tests --cov-report= ${@}
+${PREFIX}coverage report --show-missing
 #${PREFIX}mypy databases --ignore-missing-imports --disallow-untyped-defs
 #${PREFIX}autoflake --recursive databases tests
 ${PREFIX}black savannah tests --check

@@ -10,3 +10,4 @@ from .commands import (
     migrate,
     list_migrations,
 )
+from .operations.create_table import CreateTable

@@ -3,3 +3,4 @@
 migrations/
 venv/
 __pycache__/
+htmlcov/

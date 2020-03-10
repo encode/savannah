@@ -1,7 +1,8 @@
 from typing import Dict, Set, List, Tuple
 import pkgutil
+import sys
 import typing
-from importlib import import_module
+from importlib import import_module, invalidate_caches
 from databases import Database
 from .migration import Migration
 
@@ -50,6 +51,9 @@ def order_dependencies(
 def load_migrations(applied: Set[str], dir_name: str) -> List[Migration]:
     migration_classes = {}
     dependencies = {}
+
+    if "." not in sys.path:
+        sys.path.insert(0, ".")
 
     names = [name for _, name, is_pkg in pkgutil.iter_modules([dir_name])]
     for name in names:
